@@ -850,7 +850,19 @@ std::vector<std::tuple<double, int, int>> LtePhyVUeMode4::selectBestRSSIs(std::u
             }
         }
     }
-    sort(orderedCSRs.begin(), orderedCSRs.end());
+    // Initial shuffle is to remove the order natural order of their reporting e.g.
+    // (Subframe, subchannel) -> (1,1),(1,2),(1,3),(2,1),(2,2),(2,3)
+    // In the beginning as all resources are equally likely to be selected this avoids all vehicles reserving the earlier resources.
+    unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+    shuffle(orderedCSRs.begin(), orderedCSRs.end(), std::default_random_engine(seed));
+
+    std::sort(begin(orderedCSRs), end(orderedCSRs),
+              [](tuple<int, int, int> const &t1, tuple<int, int, int> const &t2) {
+                  return get<0>(t1) < get<0>(t2); // or use a custom compare function
+              }
+    );
+
+
     int minSize = std::round(totalPossibleCSRs * .2);
     orderedCSRs.resize(minSize);
 
@@ -1266,9 +1278,11 @@ void LtePhyVUeMode4::updateCBR()
         std::vector<Subchannel *>::iterator it;
         std::vector <Subchannel *> currentSubframe = sensingWindow_[cbrIndex];
         for (it = currentSubframe.begin(); it != currentSubframe.end(); it++) {
-            totalSubchannels ++;
-            if ((*it)->getAverageRSSI() > thresholdRSSI_) {
-                cbrValue ++;
+            if ((*it)->getSensed()){
+                totalSubchannels ++;
+                if ((*it)->getAverageRSSI() > thresholdRSSI_) {
+                    cbrValue ++;
+                }
             }
         }
         cbrIndex --;
@@ -1294,12 +1308,6 @@ void LtePhyVUeMode4::updateSubframe()
         // Front has gone over the end of the sensing window reset it.
         sensingWindowFront_ = 0;
     }
-
-
-    // First find the subframe that we want to look at i.e. the front one I imagine
-    // If the front isn't occupied then skip on
-    // If it is occupied, pop it off, update it and push it back
-    // All good then.
 
     std::vector<Subchannel*> subframe = sensingWindow_[sensingWindowFront_];
 
@@ -1365,14 +1373,13 @@ void LtePhyVUeMode4::initialiseSensingWindow()
 }
 
 int LtePhyVUeMode4::translateIndex(int index) {
-    int transIndex;
-    if (index > sensingWindowFront_) {
-        transIndex = ((10*pStep_) - index) + sensingWindowFront_;
+    int diff = (10 * pStep_) - index;
+    if (diff > sensingWindowFront_) {
+        return (10 * pStep_) - (diff - sensingWindowFront_);
+    }  else {
+        return sensingWindowFront_ - diff;
     }
-    else{
-        transIndex = sensingWindowFront_ - index;
-    }
-    return transIndex;
+
 }
 
 void LtePhyVUeMode4::finish()

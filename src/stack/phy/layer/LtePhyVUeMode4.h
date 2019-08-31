@@ -16,6 +16,8 @@
 #include "stack/mac/allocator/LteAllocationModule.h"
 #include "stack/phy/layer/Subchannel.h"
 #include <unordered_map>
+#include <chrono>
+#include <random>
 
 class LtePhyVUeMode4 : public LtePhyUeD2D
 {
