@@ -626,7 +626,9 @@ void LteMacVUeMode4::handleSelfMessage()
                 int expiration = range(generator_);
                 mode4Grant -> setResourceReselectionCounter(expiration);
                 mode4Grant -> setFirstTransmission(true);
-                expirationCounter_ = expiration * mode4Grant->getPeriod();
+                // Adding expiration counter to the result ensures we run out the full time of the current grant and
+                // don't start the next grant early.
+                expirationCounter_ = (expiration * mode4Grant->getPeriod()) + expirationCounter_;
             }
             else
             {
@@ -826,6 +828,7 @@ void LteMacVUeMode4::macHandleSps(cPacket* pkt)
     mode4Grant->setCodewords(1);
     mode4Grant->setStartingSubchannel(initiailSubchannel);
     mode4Grant->setMcs(maxMCSPSSCH_);
+    mode4Grant->setExpiration(mode4Grant->getResourceReselectionCounter());
 
     LteMod mod = _QPSK;
     if (maxMCSPSSCH_ > 9 && maxMCSPSSCH_ < 17)
