@@ -72,6 +72,10 @@ protected:
 
    std::vector<std::unordered_map<std::string, double>> cbrPSSCHTxConfigList_;
    std::vector<std::unordered_map<std::string, double>> cbrLevels_;
+
+   std::vector<std::tuple<simtime_t, int>> cbrUpwardTransitions_;
+   std::vector<std::tuple<simtime_t, int>> cbrDownwardTransitions_;
+
    std::unordered_map<double, int> previousTransmissions_;
    std::vector<double> validResourceReservationIntervals_;
 
@@ -156,6 +160,8 @@ protected:
      * containing the size of its buffer (for that CID)
      */
     virtual void macPduMake();
+
+    void computeCrLimit();
 
     /**
      * Parse transmission configuration for a Ue
